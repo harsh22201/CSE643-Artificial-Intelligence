@@ -245,7 +245,7 @@ def get_bidirectional_search_path(adj_matrix, start_node, goal_node):
 
 #   Test Case 1:
 #     - Start node: 1, Goal node: 2
-#     - Return: [1, 7, 6, 2]
+#     - Return: [1, 27, 9, 2]
 
 #   Test Case 2:
 #     - Start node: 5, Goal node: 12
@@ -331,7 +331,7 @@ def get_astar_search_path(adj_matrix, node_attributes, start_node, goal_node):
 
 #   Test Case 1:
 #     - Start node: 1, Goal node: 2
-#     - Return: [1, 7, 6, 2]
+#     - Return: [1, 27, 6, 2]
 
 #   Test Case 2:
 #     - Start node: 5, Goal node: 12
