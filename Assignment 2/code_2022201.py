@@ -58,10 +58,11 @@ def create_kb():
     # Count trips per stop
     stop_trip_count.update(dict(df_stop_times["stop_id"].value_counts()))
 
-    # Create fare rules for routes
-
     # Merge fare rules and attributes into a single DataFrame
     merged_fare_df = pd.merge(df_fare_attributes, df_fare_rules, on="fare_id", how='inner')
+
+    # Create fare rules for routes
+    fare_rules = merged_fare_df[['route_id', 'fare_id', 'price', 'origin_id', 'destination_id']]
 
 # Function to find the top 5 busiest routes based on the number of trips
 def get_busiest_routes():
@@ -185,15 +186,106 @@ def get_merged_fare_df():
 # Visualize the stop-route graph interactively
 def visualize_stop_route_graph_interactive(route_to_stops):
     """
-    Visualize the stop-route graph using Plotly for interactive exploration.
-
+    Visualize the stop-route graph using Plotly for interactive exploration,
+    with nodes and edges colored using a color scale for a large number of routes.
+    
     Args:
         route_to_stops (dict): A dictionary mapping route IDs to lists of stops.
-
+    
     Returns:
         None
     """
-    pass  # Implementation here
+    # Initialize directed graph
+    G = nx.DiGraph()
+    
+    # Generate color scale based on route ID range
+    route_ids = list(route_to_stops.keys())
+    colorscale = 'Viridis'  # Can be changed to any Plotly color scale
+    
+    # Normalize route IDs to [0, 1] for color mapping
+    route_id_normalized = {route_id: i / (len(route_ids) - 1) for i, route_id in enumerate(route_ids)}
+    
+    # Build graph from route_to_stops data and assign colors
+    node_colors = {}
+    edge_text_x = []
+    edge_text_y = []
+    edge_text_labels = []  # Store route IDs for edges
+    for route_id, route_stops in route_to_stops.items():
+        color_value = route_id_normalized[route_id]
+        for i in range(len(route_stops) - 1):
+            G.add_edge(route_stops[i], route_stops[i + 1], route=route_id)
+            node_colors[route_stops[i]] = color_value
+            node_colors[route_stops[i + 1]] = color_value
+    
+    # Use kamada_kawai_layout for a balanced layout
+    pos = nx.kamada_kawai_layout(G)
+    
+    # Prepare edge and node coordinates for plotting
+    edge_x = []
+    edge_y = []
+    for edge in G.edges():
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
+        edge_x += [x0, x1, None]
+        edge_y += [y0, y1, None]
+        
+        # Calculate and store midpoint for text labels
+        edge_text_x.append((x0 + x1) / 2)
+        edge_text_y.append((y0 + y1) / 2)
+        edge_text_labels.append(f"Route: {G.edges[edge]['route']}")
+
+    node_x = []
+    node_y = []
+    node_color_list = []
+    for node in G.nodes():
+        x, y = pos[node]
+        node_x.append(x)
+        node_y.append(y)
+        node_color_list.append(node_colors[node])
+
+    # Define edge trace without hover text
+    edge_trace = go.Scatter(
+        x=edge_x, y=edge_y,
+        mode='lines',
+        line=dict(width=0.5),
+        hoverinfo='none'
+    )
+
+    # Define node trace with color scale
+    node_trace = go.Scatter(
+        x=node_x, y=node_y,
+        mode='markers+text',
+        marker=dict(
+            size=5,
+            color=node_color_list,
+            colorscale=colorscale,
+            line=dict(width=0.5)),
+        text=list(G.nodes),
+        textposition="top center",
+        hoverinfo='text'
+    )
+
+    # Define edge text trace for route IDs
+    edge_text_trace = go.Scatter(
+        x=edge_text_x, y=edge_text_y,
+        mode='text',
+        text=edge_text_labels,
+        textposition="middle center",
+        textfont=dict(size=5),  # Set font size here
+        hoverinfo='text'
+    )
+
+    # Create figure and set layout
+    fig = go.Figure(data=[edge_trace, node_trace, edge_text_trace],
+                    layout=go.Layout(
+                        showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=20, l=5, r=5, t=40),
+                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
+    
+    # Display the interactive plot
+    fig.show()
 
 # Brute-Force Approach for finding direct routes
 def direct_route_brute_force(start_stop, end_stop):
@@ -214,7 +306,7 @@ def direct_route_brute_force(start_stop, end_stop):
         if ((start_stop in route_stops) and (end_stop in route_stops)):
             direct_routes.append(route_id)
 
-    return direct_routes
+    return sorted(direct_routes)
 
 # Initialize Datalog predicates for reasoning
 pyDatalog.create_terms('RouteHasStop, DirectRoute, OptimalRoute, X, Y, Z, R, R1, R2')  
