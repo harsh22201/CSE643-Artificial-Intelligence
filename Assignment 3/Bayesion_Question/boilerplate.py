@@ -35,7 +35,7 @@ def make_network(df):
     """Define and fit the initial Bayesian Network."""
     # Define the structure of the DAG as a list of edges
     dag = [
-        # ('Start_Stop_ID', 'Fare_Category'),
+        ('Start_Stop_ID', 'Fare_Category'),
         ('End_Stop_ID', 'Fare_Category'),
         ('Distance', 'Fare_Category'),
         ('Zones_Crossed', 'Fare_Category'),
@@ -56,7 +56,6 @@ def make_network(df):
     model = bn.structure_learning.fit(df)
     # Fit the Bayesian Network (define the CPDs based on the data)
     model = bn.parameter_learning.fit(model, df)
-    bn.plot(model)
     # Return the fitted model
     return model
 
@@ -96,14 +95,11 @@ def make_pruned_network(df):
                 pruned_dag.append(edge)  # Keep edge if correlation is >= 0.4
             else:
                 egdes_pruned.append(edge)
-    
-    print(f"Edges pruned: {egdes_pruned}")
-    
+
     # Create Bayesian Network with pruned DAG
     model = bn.make_DAG(pruned_dag)
     # Fit the Bayesian Network (define the CPDs based on the data)
     model = bn.parameter_learning.fit(model, df)
-    bn.plot(model)
     # Return the pruned and fitted model
     return model
 
@@ -131,7 +127,6 @@ def make_optimized_network(df):
     model = bn.structure_learning.fit(df, methodtype='hc',bw_list_method='edges',white_list=dag)
     # Learn the parameters (CPDs) for the refined network
     model = bn.parameter_learning.fit(model, df)
-    bn.plot(model)
     # Return the refined model
     return model
 
